@@ -1,90 +1,185 @@
 import React, { useState, useMemo } from 'react';
 
-// --- Type Definitions for TypeScript ---
+// --- Global Type Definitions ---
 
-// Define the structure for individual page content
-interface PageContent {
-  title: string;
-  content: string;
+// Define the structure for a color palette
+interface Palette {
+  name: string;
+  colors: string[];
 }
 
-// Define the structure for the entire pages object
-type Pages = Record<string, PageContent>;
+// --- Global Constants (Fonts and Colors) ---
 
-// Define the props for the NavLink component
-interface NavLinkProps {
-  pageName: string;
-  currentPage: string;
-  setPage: (pageName: string) => void;
-}
+const FONT_OPTIONS: string[] = [
+  'Kids Bus',
+  'Biscuit Glitch',
+  'Super Joyful'
+];
 
-// Define the content for the pages using the Pages type
-const pages: Pages = {
-  Home: {
-    title: "Welcome to Our TypeScript SPA",
-    content: "This Single Page Application now uses TypeScript for enhanced safety and maintainability. The client-side routing and traditional CSS styling remain intact, ready for Vercel deployment.",
-  },
-  About: {
-    title: "About This Project",
-    content: "This responsive application was built using a single React component file, internal CSS, and TypeScript, proving that type-safe SPAs can be clean and simple.",
-  },
-  Contact: {
-    title: "Get in Touch",
-    content: "You can find more information by contacting us at info@example.com. Notice how TypeScript helps ensure all data accessed is correctly structured.",
-  },
+const PALETTES: Palette[] = [
+  { name: 'Sunset Serenity Shades', colors: ['#ffb7a1', '#ffb7a1', '#f0bc68', '#aab8bb', '#c4d7d1', '#5f9595'] },
+  { name: 'Bubblegum Beach Sunset', colors: ['#ff5883', '#ff91ad', '#fec9d7', '#b9eee1', '#79d3be', '#39b89a'] },
+  { name: 'Cotton Candy Skies', colors: ['#cdb4db', '#e6bedc', '#ffc8dd', '#ffafcc', '#bde0fe', '#a2d2ff'] },
+  { name: 'Velvet Touch Sunset', colors: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51', '#ec8c74'] },
+  { name: 'Electric Rainbow Burst', colors: ['#01befe', '#ffdd00', '#ff7d00', '#ff006d', '#adff02', '#8f00ff'] },
+  { name: 'Summer Sunset Paradise', colors: ['#ef476f', '#f78c6b', '#ffd166', '#00FF00', '#118ab2', '#073b4c'] },
+];
+
+const STICKER_PAGE = {
+  title: 'Custom Sticker Creator',
+  content: 'Use the controls below to design your personalized text sticker.',
 };
 
-// --- Component Definitions ---
+// --- Sub-Component: Sticker Generator ---
 
-// Helper component for the navigation links
-const NavLink: React.FC<NavLinkProps> = ({ pageName, currentPage, setPage }) => (
-  <button
-    className={`nav-link ${pageName === currentPage ? 'active' : ''}`}
-    onClick={() => setPage(pageName)}
-    aria-current={pageName === currentPage ? 'page' : undefined}
-    style={{
-      padding: '0.75rem 1.25rem',
-      fontSize: '1rem',
-      fontWeight: pageName === currentPage ? '600' : '500',
-      color: pageName === currentPage ? '#FFFFFF' : '#D1D5DB',
-      backgroundColor: pageName === currentPage ? '#4F46E5' : 'transparent',
-      border: 'none',
-      cursor: 'pointer',
-      borderRadius: '0.5rem',
-      transition: 'all 0.2s',
-      margin: '0 0.25rem',
-    }}
-  >
-    {pageName}
-  </button>
-);
+const StickerGeneratorComponent: React.FC = () => {
+  const [inputText, setInputText] = useState<string>('STICKER');
+  const [size, setSize] = useState<'small' | 'big'>('small');
+  const [font, setFont] = useState<string>(FONT_OPTIONS[0]);
+  const [palette, setPalette] = useState<Palette>(PALETTES[0]);
+  const [stickerGenerated, setStickerGenerated] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
-// Main Layout Component
-const App: React.FC = () => {
-  // Explicitly typing state variables
-  const [currentPage, setCurrentPage] = useState<keyof Pages>('Home');
-  const [isLoading, setIsLoading] = useState<boolean>(false); // State to simulate loading for transitions
+  const minLength = 3;
+  const maxLength = 8;
 
-  // Simulate a page change delay for visual effect
-  // Argument 'pageName' is typed as a key of Pages
-  const handlePageChange = (pageName: keyof Pages) => {
-    if (pageName === currentPage) return;
-    setIsLoading(true);
-    setTimeout(() => {
-      setCurrentPage(pageName);
-      setIsLoading(false);
-    }, 400); // 400ms transition delay
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setInputText(value);
+    setStickerGenerated(false); // Reset sticker display on input change
+
+    if (value.length < minLength || value.length > maxLength) {
+      setError(`Text must be between ${minLength} and ${maxLength} characters.`);
+    } else {
+      setError('');
+    }
   };
 
-  // Memoize the current page content with explicit return type PageContent
-  const pageContent: PageContent = useMemo(() => {
-    // TypeScript ensures pages[currentPage] exists and matches PageContent
-    return pages[currentPage];
-  }, [currentPage]);
+  const handleGenerate = () => {
+    // Only generate if there is no error and the text is within limits
+    if (!error && inputText.length >= minLength && inputText.length <= maxLength) {
+      setStickerGenerated(true);
+    }
+  };
 
+  const generatedSticker = useMemo(() => {
+    if (!stickerGenerated || error || inputText.length === 0) {
+      return null;
+    }
+
+    // Determine font size class based on selection for CSS control
+    const sizeClass = size === 'big' ? 'sticker-big' : 'sticker-small';
+    const text = inputText.toUpperCase();
+
+    return (
+      <div className="sticker-output-area">
+        <p className="sticker-label">Generated Sticker Preview:</p>
+        <div className="sticker-text-container" style={{ fontFamily: font }}>
+          {text.split('').map((char, index) => {
+            // Cycle through the selected palette colors
+            const colorIndex = index % palette.colors.length;
+            const charColor = palette.colors[colorIndex];
+
+            return (
+              <span
+                key={index}
+                // Apply the size class for responsive control
+                className={`sticker-char ${sizeClass}`}
+                style={{
+                  color: charColor,
+                  // textShadow is now managed entirely in CSS to handle the complex stacking
+                }}
+              >
+                {char}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }, [stickerGenerated, error, inputText, size, font, palette]);
+
+  return (
+    <div className="sticker-generator-content">
+      {/* 1. Input Section */}
+      <div className="input-group">
+        <label htmlFor="sticker-text">Sticker Text (Min: 3, Max: 8 characters)</label>
+        <input
+          id="sticker-text"
+          type="text"
+          value={inputText}
+          onChange={handleInputChange}
+          maxLength={maxLength}
+          placeholder="Enter name (e.g., GEMINI)"
+          className={`text-input ${error ? 'input-error' : ''}`}
+        />
+        {error && <p className="error-message">{error}</p>}
+      </div>
+
+      <div className="options-grid">
+        {/* 2. Size Option */}
+        <div className="input-group">
+          <label>Text Size</label>
+          <div className="radio-group">
+            <input type="radio" id="size-small" name="size" checked={size === 'small'} onChange={() => setSize('small')} />
+            <label htmlFor="size-small">Small</label>
+            <input type="radio" id="size-big" name="size" checked={size === 'big'} onChange={() => setSize('big')} />
+            <label htmlFor="size-big">Big</label>
+          </div>
+        </div>
+
+        {/* 3. Font Option */}
+        <div className="input-group">
+          <label htmlFor="font-select">Font Selection</label>
+          <select 
+            id="font-select" 
+            value={font} 
+            onChange={(e) => setFont(e.target.value)}
+            className="select-input"
+          >
+            {FONT_OPTIONS.map(f => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 4. Color Palette Option */}
+        <div className="input-group">
+          <label htmlFor="palette-select">Color Palette</label>
+          <select 
+            id="palette-select" 
+            value={palette.name} 
+            onChange={(e) => setPalette(PALETTES.find(p => p.name === e.target.value) || PALETTES[0])}
+            className="select-input"
+          >
+            {PALETTES.map(p => (
+              <option key={p.name} value={p.name}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 5. Generate Button */}
+      <button
+        className="generate-button"
+        onClick={handleGenerate}
+        disabled={!!error || inputText.length < minLength}
+      >
+        Generate Sticker
+      </button>
+
+      {/* 6. Sticker Display */}
+      {generatedSticker}
+    </div>
+  );
+};
+
+// --- Main Layout Component ---
+
+const App: React.FC = () => {
   // Define traditional CSS styles as a string to be injected via <style>
   const cssStyles: string = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
 
     /* BASE STYLES */
     body {
@@ -97,7 +192,7 @@ const App: React.FC = () => {
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      max-width: 1200px;
+      max-width: 800px; /* Reduced max-width for better focus */
       margin: 0 auto;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
       background-color: #ffffff;
@@ -105,28 +200,21 @@ const App: React.FC = () => {
       overflow: hidden;
     }
 
-    /* HEADER / NAVIGATION STYLES */
+    /* HEADER STYLES */
     .header {
       background-color: #1F2937; /* Dark Gray background */
       padding: 1rem 2rem;
       display: flex;
-      justify-content: space-between;
+      justify-content: center; /* Center the logo/title */
       align-items: center;
       box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
-      flex-wrap: wrap; /* Allows wrapping on small screens */
     }
 
     .logo {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       font-weight: 700;
       color: #F9FAFB;
-      margin-right: 1rem;
       text-decoration: none;
-    }
-
-    .nav {
-      display: flex;
-      gap: 0.5rem;
     }
 
     /* MAIN CONTENT STYLES */
@@ -134,28 +222,19 @@ const App: React.FC = () => {
       padding: 2rem;
       flex-grow: 1;
       position: relative;
-      min-height: 300px; /* Ensure space during loading */
     }
 
     .page-card {
       background-color: #ffffff;
-      padding: 2rem;
+      padding: 0; 
       border-radius: 0.75rem;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-      opacity: 1;
-      transform: translateY(0);
-      transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-    }
-
-    .page-card.exiting {
-      opacity: 0;
-      transform: translateY(-20px);
     }
 
     .page-card h1 {
       color: #111827;
       font-size: 2rem;
-      margin-bottom: 1rem;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
       border-bottom: 2px solid #6366F1;
       padding-bottom: 0.5rem;
     }
@@ -164,18 +243,144 @@ const App: React.FC = () => {
       color: #4B5563;
       font-size: 1.125rem;
       line-height: 1.75;
+      margin-bottom: 1.5rem;
+    }
+    
+    /* --- STICKER GENERATOR STYLES --- */
+    .sticker-generator-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
 
-    /* BUTTON/LINK HOVER EFFECTS */
-    .nav-link:hover {
-      background-color: #6366F1 !important;
-      color: #FFFFFF !important;
+    .input-group label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
     }
 
-    .nav-link.active {
-      background-color: #4F46E5 !important;
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.5);
+    .text-input, .select-input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #D1D5DB;
+      border-radius: 0.5rem;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+      transition: border-color 0.2s;
     }
+    
+    .text-input:focus, .select-input:focus {
+        outline: none;
+        border-color: #6366F1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+    
+    .input-error {
+        border-color: #EF4444 !important;
+    }
+
+    .error-message {
+      color: #EF4444;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .radio-group input[type="radio"] {
+        margin-right: 0.5rem;
+    }
+
+    .radio-group label {
+        display: inline-block;
+        font-weight: 400;
+        margin-right: 1.5rem;
+        cursor: pointer;
+    }
+
+    .generate-button {
+      padding: 1rem 2rem;
+      background-color: #4F46E5;
+      color: white;
+      font-size: 1.125rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px #4338CA;
+    }
+    
+    .generate-button:hover:not(:disabled) {
+        background-color: #6366F1;
+    }
+    
+    .generate-button:active:not(:disabled) {
+        transform: translateY(2px);
+        box-shadow: 0 2px #4338CA;
+    }
+    
+    .generate-button:disabled {
+        background-color: #9CA3AF;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+    
+    /* Sticker Output Area */
+    .sticker-output-area {
+        margin-top: 2rem;
+        padding: 2rem 1rem;
+        border: 2px dashed #9CA3AF;
+        border-radius: 1rem;
+        text-align: center;
+        background-color: #e3e3e3ff;
+        overflow-x: auto;
+    }
+
+    .sticker-label {
+        font-size: 1rem;
+        color: #6B7280;
+        margin-bottom: 1rem;
+    }
+
+    .sticker-text-container {
+        white-space: nowrap; 
+        display: inline-block;
+        line-height: 1;
+    }
+
+    .sticker-char {
+        display: inline-block;
+        font-weight: 900;
+        letter-spacing: -1px; /* Slightly negative for snappier text */
+        transition: color 0.3s, font-size 0.3s;
+        
+        /* --- NEW: Multi-Shadow Outline (4px thickness) --- */
+        text-shadow:
+          /* White Outline Shadows (4px thick outline) */
+          4px 0 0 #FFFFFF, -4px 0 0 #FFFFFF,  /* Horizontal */
+          0 4px 0 #FFFFFF, 0 -4px 0 #FFFFFF,  /* Vertical */
+          3px 3px 0 #FFFFFF, -3px -3px 0 #FFFFFF, /* Diagonal */
+          3px -3px 0 #FFFFFF, -3px 3px 0 #FFFFFF, /* Diagonal */
+          
+          /* The original Dark Drop Shadow (applied last for stacking) */
+          8px 8px 4px rgba(0, 0, 0, 0.4); 
+    }
+
+    /* Desktop Sticker Sizes */
+    .sticker-small {
+        font-size: 40px; 
+    }
+    
+    .sticker-big {
+        font-size: 64px; 
+    }
+
 
     /* FOOTER STYLES */
     .footer {
@@ -187,27 +392,35 @@ const App: React.FC = () => {
       background-color: #F9FAFB;
     }
 
-    /* RESPONSIVENESS */
+    /* RESPONSIVENESS (Mobile First Adjustments) */
     @media (max-width: 600px) {
       .header {
-        flex-direction: column;
-        align-items: flex-start;
+        padding: 1rem;
       }
-      .nav {
-        margin-top: 1rem;
-        width: 100%;
-        justify-content: space-around;
-      }
-      .nav-link {
-        flex: 1;
-        text-align: center;
-        margin: 0.25rem 0;
+      .logo {
+        font-size: 1.5rem;
       }
       .main-content {
         padding: 1rem;
       }
-      .page-card {
-        padding: 1.5rem;
+      
+      /* Force inputs into a single column on mobile and reduce gap */
+      .options-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      /* Mobile Sticker Sizes (Scaling down for small screens) */
+      .sticker-small {
+          font-size: 32px; 
+      }
+      
+      .sticker-big {
+          font-size: 48px; 
+      }
+      
+      .sticker-output-area {
+        padding: 1rem 0.5rem;
       }
     }
   `;
@@ -218,30 +431,19 @@ const App: React.FC = () => {
       <style>{cssStyles}</style>
 
       <header className="header">
-        <a href="#" className="logo">Vercel SPA Demo (TS)</a>
-        <nav className="nav">
-          {/* We must cast Object.keys result to the correct type array for TypeScript */}
-          {(Object.keys(pages) as (keyof Pages)[]).map((pageName) => (
-            <NavLink
-              key={pageName}
-              pageName={pageName}
-              currentPage={currentPage}
-              setPage={handlePageChange}
-            />
-          ))}
-        </nav>
+        <div className="logo">Sticker Generator App</div>
       </header>
 
       <main className="main-content">
-        {/* Page Content */}
-        <div className={`page-card ${isLoading ? 'exiting' : ''}`}>
-          <h1>{pageContent.title}</h1>
-          <p>{pageContent.content}</p>
+        <div className="page-card">
+          <h1>{STICKER_PAGE.title}</h1>
+          <p>{STICKER_PAGE.content}</p>
+          <StickerGeneratorComponent />
         </div>
       </main>
 
       <footer className="footer">
-        &copy; {new Date().getFullYear()} Single Page Application Demo | Hosted on Vercel
+        &copy; {new Date().getFullYear()} Sticker Generator | Ready for Vercel
       </footer>
     </div>
   );
